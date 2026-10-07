@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opstrat"
+dynamic = ["version"]
+description = "Interactive option strategy visualizer built on Plotly"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Abhijith Chandradas", email = "abhijith.chandradas@gmail.com" }]
+keywords = ["python", "options", "finance", "opstrat", "plotly", "data visualization", "stock market"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "plotly>=5.23",
+]
+
+[project.optional-dependencies]
+yf = ["yfinance>=0.2.40", "pandas>=2.0"]
+image = ["kaleido>=0.2"]
+notebook = ["nbformat>=4.2.0", "ipykernel"]
+dev = ["pytest>=8", "pandas>=2.0"]
+
+[project.urls]
+Homepage = "https://github.com/hedge-design/opstrat"
+Source = "https://github.com/hedge-design/opstrat"
+Upstream = "https://github.com/hashABCD/opstrat"
+
+[tool.setuptools.dynamic]
+version = { attr = "opstrat.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["opstrat*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

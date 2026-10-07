@@ -1,33 +1,7 @@
-import yfinance as yf
-import numpy as np
+"""Backwards-compatible re-exports of the pre-1.0 helper functions."""
 
-def check_optype(op_type):
-    if (op_type not in ['p','c']):
-        raise ValueError("Input 'p' for put and 'c' for call!")
+from .legs import check_optype, check_trtype
+from .payoff import payoff_calculator
+from .yf import spot_price as check_ticker
 
-def check_trtype(tr_type):
-    if (tr_type not in ['b','s']):
-        raise ValueError("Input 'b' for Buy and 's' for Sell!")  
-
-def payoff_calculator(x, op_type, strike, op_pr, tr_type, n):
-    y=[]
-    if op_type=='c':
-        for i in range(len(x)):
-            y.append(max((x[i]-strike-op_pr),-op_pr))
-    else:
-        for i in range(len(x)):
-            y.append(max(strike-x[i]-op_pr,-op_pr))
-    y=np.array(y)
-
-    if tr_type=='s':
-        y=-y
-    return y*n
-
-def check_ticker(ticker):
-    """
-    Check ticker
-    """
-    try:
-        return yf.Ticker('msft').info['currentPrice']
-    except KeyError:
-        raise ValueError('Ticker not recognized')
+__all__ = ["check_optype", "check_trtype", "payoff_calculator", "check_ticker"]
