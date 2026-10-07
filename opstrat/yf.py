@@ -61,7 +61,10 @@ def yf_plotter(
     save=False,
     file="fig.html",
     show=False,
-    theme="light",
+    theme=None,
+    show_title=True,
+    show_subtitle=True,
+    show_toolbar=True,
 ):
     """Payoff diagram using current option prices from Yahoo Finance.
 
@@ -78,6 +81,10 @@ def yf_plotter(
     price : {'last', 'mid', 'bid', 'ask'}, default 'last'
         Which quote to use as the premium. Falls back to the last trade
         price when the quote is zero (e.g. outside market hours).
+
+    Other display options (``theme``, ``show_title``, ``show_subtitle``,
+    ``show_toolbar``, ``save``, ``file``, ``show``) are as in
+    :func:`opstrat.single_plotter`.
 
     Example
     -------
@@ -121,5 +128,7 @@ def yf_plotter(
         legs.append(Leg.from_dict({**op, "op_pr": _option_price(match.iloc[0], price)}))
 
     title = f"{ticker.upper()} option strategy  ·  Exp {exp}"
-    fig = payoff_figure(legs, spot, spot_range, title=title, theme=theme)
+    fig = payoff_figure(legs, spot, spot_range, title=title, theme=theme,
+                        show_title=show_title, show_subtitle=show_subtitle,
+                        show_toolbar=show_toolbar)
     return finish(fig, save, file, show)

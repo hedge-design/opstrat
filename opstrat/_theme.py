@@ -22,6 +22,30 @@ _TOKENS = {
 }
 
 
+_default_theme = "dark"
+
+
+def set_theme(theme: str) -> None:
+    """Set the theme used when a plotter is called without ``theme=``.
+
+    >>> op.set_theme('light')
+    """
+    global _default_theme
+    _default_theme = resolve_theme(theme)
+
+
+def get_theme() -> str:
+    """Return the current default theme."""
+    return _default_theme
+
+
+def resolve_theme(theme: str | None) -> str:
+    theme = _default_theme if theme is None else str(theme).lower()
+    if theme not in _TOKENS:
+        raise ValueError("theme must be 'light' or 'dark'")
+    return theme
+
+
 def tokens(theme: str) -> dict:
     if theme not in _TOKENS:
         raise ValueError("theme must be 'light' or 'dark'")
@@ -35,12 +59,15 @@ def series_color(theme: str, i: int) -> str:
     return palette[i]
 
 
-def base_layout(theme: str, title: str, subtitle: str | None = None) -> dict:
+def base_layout(theme: str, title: str | None, subtitle: str | None = None) -> dict:
+    """Layout shared by all charts. ``None`` title/subtitle hides it and
+    shrinks the top margin to match."""
     t = tokens(theme)
     axis = dict(gridcolor=t["grid"], zeroline=False, linecolor=t["grid"],
                 tickfont=dict(color=t["text2"]), title_font=dict(color=t["text2"]))
+    top = 40 + (40 if title else 0) + (30 if subtitle else 0)
     return dict(
-        title=dict(text=title, x=0, xanchor="left", font=dict(size=18, color=t["text"]),
+        title=dict(text=title or "", x=0, xanchor="left", font=dict(size=18, color=t["text"]),
                    subtitle=dict(text=subtitle or "", font=dict(size=13, color=t["text2"]))),
         paper_bgcolor=t["surface"],
         plot_bgcolor=t["surface"],
@@ -52,9 +79,58 @@ def base_layout(theme: str, title: str, subtitle: str | None = None) -> dict:
                     font=dict(color=t["text2"]), bgcolor="rgba(0,0,0,0)"),
         hoverlabel=dict(bgcolor=t["surface"], font=dict(color=t["text"]),
                         bordercolor=t["grid"]),
-        margin=dict(l=60, r=30, t=110, b=60),
+        modebar=dict(bgcolor="rgba(0,0,0,0)", color=t["muted"], activecolor=t["text"]),
+        margin=dict(l=60, r=30, t=top, b=60),
         height=520,
     )
+
+
+class OpstratFigure(go.Figure):
+    """A ``go.Figure`` that remembers its Plotly display config.
+
+    The config (e.g. ``{'displayModeBar': False}`` to hide the toolbar) is
+    applied in notebooks, ``show()``, ``to_html()`` and ``write_html()``.
+    A ``config=`` passed to those calls is merged on top.
+    """
+
+    def __init__(self, *args, plotly_config: dict | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._plotly_config = dict(plotly_config or {})
+
+    @property
+    def plotly_config(self) -> dict:
+        return self._plotly_config
+
+    @plotly_config.setter
+    def plotly_config(self, value: dict) -> None:
+        self._plotly_config = dict(value or {})
+
+    def _with_config(self, kwargs: dict) -> dict:
+        return {**kwargs, "config": {**self._plotly_config, **(kwargs.get("config") or {})}}
+
+    def show(self, *args, **kwargs):
+        return super().show(*args, **self._with_config(kwargs))
+
+    def to_html(self, *args, **kwargs):
+        return super().to_html(*args, **self._with_config(kwargs))
+
+    def write_html(self, *args, **kwargs):
+        return super().write_html(*args, **self._with_config(kwargs))
+
+    def _repr_mimebundle_(self, include=None, exclude=None, validate=True, **kwargs):
+        return super()._repr_mimebundle_(include, exclude, validate, **self._with_config(kwargs))
+
+    def _ipython_display_(self):
+        import plotly.io as pio
+
+        if pio.renderers.render_on_display and pio.renderers.default:
+            self.show()
+        else:
+            print(repr(self))
+
+
+def toolbar_config(show_toolbar: bool) -> dict:
+    return {} if show_toolbar else {"displayModeBar": False}
 
 
 def finish(fig: go.Figure, save: bool, file: str | Path, show: bool) -> go.Figure:

@@ -14,8 +14,8 @@ This is a modernised fork of [hashABCD/opstrat](https://github.com/hashABCD/opst
 
 ## What's new in 2.0
 
-* **Interactive Plotly figures**: hover for per-leg and combined P/L, zoom, light and
-  dark themes, and HTML export. Every plotter returns a `plotly.graph_objects.Figure`.
+* **Interactive Plotly figures**: hover for per-leg and combined P/L, zoom, dark (default)
+  and light themes, and HTML export. Every plotter returns a `plotly.graph_objects.Figure`.
 * **Exact strategy statistics**: max profit, max loss (including "Unlimited") and
   breakevens are solved analytically and shown on every chart, or via `op.summarize()`.
 * **Vectorised Black-Scholes**: pass arrays for any input, with an optional dividend
@@ -79,8 +79,9 @@ op.single_plotter(spot=460, strike=460, op_type='p', tr_type='s', op_pr=12.5)
 | `tr_type` | `'b'` | `'b'` long, `'s'` short |
 | `op_pr` | `2` | option premium |
 | `contracts` | `1` | number of contracts |
-| `theme` | `'light'` | `'light'` or `'dark'` |
-| `save`, `file`, `show` | `False`, `'fig.html'`, `False` | output control (see [Saving](#5-saving)) |
+| `theme` | `None` → session default (`'dark'`) | `'dark'` or `'light'` |
+| `show_title`, `show_subtitle`, `show_toolbar` | `True` | hide the title, the stats subtitle or the Plotly toolbar |
+| `save`, `file`, `show` | `False`, `'fig.html'`, `False` | output control (see [Saving](#6-saving)) |
 
 ### 2. `multi_plotter()` — any multi-leg strategy
 
@@ -126,7 +127,31 @@ op.greeks_plotter(K=100, t=30, v=[20, 40], x_axis='spot',
 ```
 ![greeks](readme_files/plotly_greeks.png)
 
-### 5. Saving
+### 5. Themes and display options
+
+Charts use a dark theme by default. Pass `theme='light'` to one call, or change the
+default for the session:
+
+```python
+op.single_plotter(theme='light')   # just this chart
+op.set_theme('light')              # every chart from here on
+op.get_theme()                     # 'light'
+```
+
+Every plotter can also hide the title, the max profit / max loss / breakeven subtitle and
+the Plotly toolbar (all shown by default):
+
+```python
+op.multi_plotter(op_list=iron_condor, spot=212.26,
+                 show_title=False, show_subtitle=False, show_toolbar=False)
+```
+
+`greeks_plotter` has no subtitle, so it takes only `show_title` and `show_toolbar`. The
+toolbar setting is kept on the figure, so it also applies to `fig.show()` and
+`fig.write_html()`. To change it after the figure is created, set
+`fig.plotly_config = {'displayModeBar': False}`.
+
+### 6. Saving
 
 ```python
 op.multi_plotter(save=True, file='strategy.html')   # interactive HTML, no extras needed
@@ -134,7 +159,7 @@ op.multi_plotter(save=True, file='strategy.png')    # needs opstrat[image] (kale
 ```
 Or use Plotly directly on the returned figure: `fig.write_html(...)`, `fig.write_image(...)`.
 
-### 6. Strategy math without plotting
+### 7. Strategy math without plotting
 
 ```python
 legs = [op.Leg('c', 110, 's', 2), op.Leg('p', 95, 's', 6)]

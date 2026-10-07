@@ -3,6 +3,7 @@
 __version__ = "2.0.0"
 __author__ = "Abhijith Chandradas"
 
+from ._theme import get_theme, set_theme
 from .blackscholes import black_scholes
 from .legs import Leg
 from .payoff import StrategySummary, leg_payoff, strategy_payoff, summarize
@@ -13,10 +14,12 @@ __all__ = [
     "Leg",
     "StrategySummary",
     "black_scholes",
+    "get_theme",
     "greeks_plotter",
     "leg_payoff",
     "multi_plotter",
     "payoff_figure",
+    "set_theme",
     "single_plotter",
     "strategy_payoff",
     "summarize",

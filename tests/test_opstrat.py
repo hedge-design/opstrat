@@ -207,3 +207,51 @@ def test_yf_plotter_bad_strike_and_expiry(fake_yf):
         op.yf_plotter("abc", op_list=[{"op_type": "c", "strike": 101, "tr_type": "b"}])
     with pytest.raises(ValueError, match="not available"):
         op.yf_plotter("abc", exp="2030-01-01", op_list=[{"op_type": "c", "strike": 100}])
+
+
+def test_dark_is_default_and_set_theme():
+    dark_bg = op.multi_plotter().layout.paper_bgcolor
+    assert op.get_theme() == "dark" and dark_bg == "#1a1a19"
+    try:
+        op.set_theme("light")
+        assert op.single_plotter().layout.paper_bgcolor == "#fcfcfb"
+        assert op.greeks_plotter(v=20, greeks=("delta",)).layout.paper_bgcolor == "#fcfcfb"
+        assert op.single_plotter(theme="dark").layout.paper_bgcolor == dark_bg  # per-call override
+        with pytest.raises(ValueError):
+            op.set_theme("blue")
+    finally:
+        op.set_theme("dark")
+
+
+def test_title_subtitle_toolbar_on_by_default():
+    fig = op.multi_plotter()
+    assert fig.layout.title.text and fig.layout.title.subtitle.text
+    assert fig.plotly_config == {}
+    assert isinstance(fig, go.Figure)
+
+
+def test_hide_title_subtitle_toolbar(tmp_path):
+    fig = op.single_plotter(show_title=False, show_subtitle=False, show_toolbar=False)
+    assert fig.layout.title.text == "" and fig.layout.title.subtitle.text == ""
+    assert fig.layout.margin.t < op.single_plotter().layout.margin.t
+    assert fig.plotly_config == {"displayModeBar": False}
+
+    # toolbar setting reaches saved HTML
+    out = tmp_path / "f.html"
+    op.multi_plotter(show_toolbar=False, save=True, file=str(out))
+    assert '"displayModeBar": false' in out.read_text()
+
+    g = op.greeks_plotter(v=20, greeks=("delta",), show_title=False, show_toolbar=False)
+    assert g.layout.title.text == "" and g.plotly_config == {"displayModeBar": False}
+
+
+def test_toolbar_config_in_mimebundle():
+    import plotly.io as pio
+
+    old = pio.renderers.default
+    try:
+        pio.renderers.default = "plotly_mimetype"
+        bundle = op.multi_plotter(show_toolbar=False)._repr_mimebundle_()
+        assert bundle["application/vnd.plotly.v1+json"]["config"]["displayModeBar"] is False
+    finally:
+        pio.renderers.default = old

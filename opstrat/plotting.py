@@ -8,7 +8,15 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from ._theme import base_layout, finish, series_color, tokens
+from ._theme import (
+    OpstratFigure,
+    base_layout,
+    finish,
+    resolve_theme,
+    series_color,
+    tokens,
+    toolbar_config,
+)
 from .blackscholes import black_scholes
 from .legs import NAMES, Leg, to_legs
 from .payoff import leg_payoff, strategy_payoff, summarize
@@ -37,15 +45,25 @@ def payoff_figure(
     spot: float,
     spot_range: float = 20,
     title: str = "Option strategy payoff at expiry",
-    theme: str = "light",
+    theme: str | None = None,
     show_legs: bool = True,
+    show_title: bool = True,
+    show_subtitle: bool = True,
+    show_toolbar: bool = True,
 ) -> go.Figure:
     """Build the payoff-at-expiry figure for any list of legs.
 
     Shaded regions mark profit (blue) and loss (red); individual legs are
     dashed, the combined position is the solid line.
+
+    Parameters
+    ----------
+    show_title, show_subtitle, show_toolbar : bool, default True
+        Set False to hide the chart title, the max profit / max loss /
+        breakeven subtitle, or the Plotly toolbar (modebar).
     """
     legs = to_legs(op_list)
+    theme = resolve_theme(theme)
     if spot <= 0:
         raise ValueError("spot must be positive")
     if not 0 < spot_range < 100:
@@ -59,7 +77,7 @@ def payoff_figure(
     x = np.unique(np.concatenate([x, [e for e in extra if lo <= e <= hi]]))
     y = strategy_payoff(x, legs)
 
-    fig = go.Figure()
+    fig = OpstratFigure(plotly_config=toolbar_config(show_toolbar))
     for clip, color, name in ((np.maximum, t["profit"], "Profit"),
                               (np.minimum, t["loss"], "Loss")):
         fig.add_trace(go.Scatter(
@@ -98,7 +116,8 @@ def payoff_figure(
         annotation_position="top right",
     )
 
-    fig.update_layout(**base_layout(theme, title, _subtitle(legs)))
+    fig.update_layout(**base_layout(theme, title if show_title else None,
+                                    _subtitle(legs) if show_subtitle else None))
     fig.update_layout(
         hovermode="x unified",
         showlegend=multi,
@@ -120,7 +139,10 @@ def single_plotter(
     save=False,
     file="fig.html",
     show=False,
-    theme="light",
+    theme=None,
+    show_title=True,
+    show_subtitle=True,
+    show_toolbar=True,
 ):
     """Payoff diagram for a single option.
 
@@ -146,7 +168,12 @@ def single_plotter(
     file : str, default 'fig.html'
     show : bool, default False
         Call ``fig.show()``. In Jupyter, the returned figure renders on its own.
-    theme : {'light', 'dark'}
+    theme : {'light', 'dark'}, optional
+        Defaults to the session theme, 'dark' unless changed with
+        :func:`opstrat.set_theme`.
+    show_title, show_subtitle, show_toolbar : bool, default True
+        Set False to hide the chart title, the max profit / max loss /
+        breakeven subtitle, or the Plotly toolbar (modebar).
 
     Returns
     -------
@@ -159,7 +186,9 @@ def single_plotter(
     """
     leg = Leg(op_type, strike, tr_type, op_pr, contracts)
     title = f"{NAMES[leg.tr_type]} {NAMES[leg.op_type]}  ·  Strike {strike:,g}"
-    fig = payoff_figure([leg], spot, spot_range, title=title, theme=theme)
+    fig = payoff_figure([leg], spot, spot_range, title=title, theme=theme,
+                        show_title=show_title, show_subtitle=show_subtitle,
+                        show_toolbar=show_toolbar)
     return finish(fig, save, file, show)
 
 
@@ -170,15 +199,19 @@ def multi_plotter(
     save=False,
     file="fig.html",
     show=False,
-    theme="light",
+    theme=None,
     title="Multiple options strategy",
     show_legs=True,
+    show_title=True,
+    show_subtitle=True,
+    show_toolbar=True,
 ):
     """Payoff diagram for several options plus the combined position.
 
     ``op_list`` is a list of :class:`opstrat.Leg` objects or dicts with keys
     ``op_type`` ('c'/'p'), ``strike``, ``tr_type`` ('b'/'s'), ``op_pr`` and
-    optional ``contracts`` (``contract`` also accepted).
+    optional ``contracts`` (``contract`` also accepted). Display options are as
+    in :func:`single_plotter`.
 
     Example
     -------
@@ -187,7 +220,8 @@ def multi_plotter(
     >>> op.multi_plotter(spot=100, spot_range=20, op_list=[op1, op2])
     """
     fig = payoff_figure(op_list, spot, spot_range, title=title, theme=theme,
-                        show_legs=show_legs)
+                        show_legs=show_legs, show_title=show_title,
+                        show_subtitle=show_subtitle, show_toolbar=show_toolbar)
     return finish(fig, save, file, show)
 
 
@@ -227,7 +261,9 @@ def greeks_plotter(
     save=False,
     file="greeks.html",
     show=False,
-    theme="light",
+    theme=None,
+    show_title=True,
+    show_toolbar=True,
 ):
     """Plot Black-Scholes value and greeks, one panel per measure.
 
@@ -243,6 +279,8 @@ def greeks_plotter(
     greeks : sequence of str
         Any of 'value', 'intrinsic', 'time_value', 'delta', 'gamma',
         'theta', 'vega', 'rho'.
+    show_title, show_toolbar : bool, default True
+        Set False to hide the chart title or the Plotly toolbar.
 
     Example
     -------
@@ -252,6 +290,7 @@ def greeks_plotter(
     if unknown:
         raise ValueError(f"Unknown greek(s): {sorted(unknown)}")
     vols = [v] if np.isscalar(v) else list(v)
+    theme = resolve_theme(theme)
     t_ = tokens(theme)
 
     if x_axis == "t":
@@ -271,6 +310,7 @@ def greeks_plotter(
     cols = 2 if len(greeks) > 1 else 1
     rows = -(-len(greeks) // cols)
     fig = make_subplots(rows=rows, cols=cols, shared_xaxes=True,
+                        figure=OpstratFigure(plotly_config=toolbar_config(show_toolbar)),
                         subplot_titles=[_GREEK_LABELS[g] for g in greeks],
                         vertical_spacing=0.09, horizontal_spacing=0.08)
 
@@ -285,7 +325,7 @@ def greeks_plotter(
                 hovertemplate=f"σ {vol:g}%: %{{y:,.4f}}<extra></extra>",
             ), row=j // cols + 1, col=j % cols + 1)
 
-    layout = base_layout(theme, title)
+    layout = base_layout(theme, title if show_title else None)
     axis = layout.pop("xaxis")
     layout.pop("yaxis")
     fig.update_layout(**layout)
