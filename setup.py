@@ -27,6 +27,7 @@ setup(
     install_requires=['matplotlib', 
                       'pandas', 
                       'numpy',
+                      'scipy',
                       'seaborn',
                       'yfinance'],
     keywords=['python', 
@@ -53,4 +54,3 @@ setup(
 
 #Display README.md in PYPI
 #https://stackoverflow.com/questions/26737222/how-to-make-pypi-description-markdown-work
-
